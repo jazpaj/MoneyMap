@@ -1,8 +1,10 @@
-import { NavLink } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../App'
 import {
   LayoutDashboard, ArrowLeftRight, PiggyBank, Wallet,
-  Tag, Repeat, Upload, LogOut, DollarSign, FileBarChart
+  Tag, Repeat, Upload, LogOut, DollarSign, FileBarChart,
+  Menu, X
 } from 'lucide-react'
 
 const navSections = [
@@ -31,17 +33,66 @@ const navSections = [
   },
 ]
 
+// Bottom nav items for mobile (most used pages)
+const bottomNavItems = [
+  { path: '/', label: 'Home', icon: LayoutDashboard },
+  { path: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { path: '/budgets', label: 'Budgets', icon: PiggyBank },
+  { path: '/accounts', label: 'Accounts', icon: Wallet },
+  { path: '/reports', label: 'Reports', icon: FileBarChart },
+]
+
 export default function Layout({ children }) {
   const { user, logout } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const location = useLocation()
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [location.pathname])
+
+  // Prevent body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [sidebarOpen])
 
   return (
     <div className="app-layout">
-      <aside className="sidebar">
+      {/* Mobile header */}
+      <header className="mobile-header">
+        <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)}>
+          <Menu size={22} />
+        </button>
+        <div className="mobile-header-title">
+          <DollarSign size={18} style={{ color: 'var(--accent-light)' }} />
+          <span>MoneyMap</span>
+        </div>
+        <div style={{ width: 40 }} />
+      </header>
+
+      {/* Sidebar overlay for mobile */}
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-logo">
-          <h1>
-            <span><DollarSign size={21} /></span>
-            MoneyMap
-          </h1>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h1>
+              <span><DollarSign size={21} /></span>
+              MoneyMap
+            </h1>
+            <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)}>
+              <X size={20} />
+            </button>
+          </div>
           <p>{user?.full_name || user?.username}</p>
         </div>
         <nav className="sidebar-nav">
@@ -69,9 +120,26 @@ export default function Layout({ children }) {
           </button>
         </div>
       </aside>
+
+      {/* Main content */}
       <main className="main-content">
         {children}
       </main>
+
+      {/* Mobile bottom navigation */}
+      <nav className="bottom-nav">
+        {bottomNavItems.map(({ path, label, icon: Icon }) => (
+          <NavLink
+            key={path}
+            to={path}
+            end={path === '/'}
+            className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`}
+          >
+            <Icon size={20} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }
